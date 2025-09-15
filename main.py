@@ -1,43 +1,49 @@
 import os
-import re
 from telethon import TelegramClient, events
-import requests
 
-# Variáveis de ambiente (configure no Railway)
+# Variáveis de ambiente (Railway)
 API_ID = int(os.getenv("API_ID"))
 API_HASH = os.getenv("API_HASH")
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-CHAT_ID = os.getenv("CHAT_ID")  # seu ID pessoal para receber alertas
-GRUPO = "promo_imperdivel"  # grupo público do Telegram
+CHAT_ID = os.getenv("CHAT_ID")  # ID onde você recebe os alertas
 
-# Cliente Telethon (usuário normal)
-client = TelegramClient("sessao", API_ID, API_HASH)
+# Inicializa cliente
+client = TelegramClient("bot", API_ID, API_HASH).start(bot_token=BOT_TOKEN)
 
-# Função para enviar mensagem para você via Bot API
-def notificar_usuario(texto):
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    payload = {"chat_id": CHAT_ID, "text": texto}
-    try:
-        requests.post(url, data=payload)
-    except Exception as e:
-        print("Erro ao enviar notificação:", e)
+# Lista de palavras-chave e limites de preço
+keywords = {
+    "TV SAMSUNG QLED": 2300,
+    "IPHONE 16": 4200,
+}
 
-# Evento: quando chegar mensagem nova no grupo
-@client.on(events.NewMessage(chats=GRUPO))
+# Monitora todas as mensagens
+@client.on(events.NewMessage)
 async def handler(event):
-    texto = event.raw_text.lower()
+    text = event.message.message.upper()
 
-    if "cervejeira" in texto:
-        # extrair números (preços)
-        numeros = re.findall(r"\d+", texto.replace(".", "").replace(",", ""))
-        for n in numeros:
-            preco = int(n)
-            if preco < 160000:  # ajustado para lidar com valores tipo 1.599,00 -> 159900
-                alerta = f"🔔 Promoção encontrada!\n\n{event.raw_text}"
-                print(alerta)
-                notificar_usuario(alerta)
-                break
+    # 🔎 Detectar CUPOM
+    if "CUPOM" in text:
+        await client.send_message(CHAT_ID, f"🎟️ Cupom encontrado!\n\n{text}")
+        return
 
-print("🤖 Bot rodando... escutando grupo de promoções.")
-client.start()
+    # 🔎 Verificar itens com preço
+    for item, limite in keywords.items():
+        if item in text:
+            preco = extrair_preco(text)
+            if preco and preco <= limite:
+                await client.send_message(
+                    CHAT_ID,
+                    f"🔥 Promoção encontrada: {item}\nPreço: R$ {preco}\n\n{text}",
+                )
+
+# Função auxiliar para extrair preço do texto
+def extrair_preco(texto: str):
+    import re
+    match = re.search(r"(\d{1,3}(?:\.\d{3})*,\d{2})", texto)
+    if match:
+        valor = match.group(1).replace(".", "").replace(",", ".")
+        return float(valor)
+    return None
+
+print("🤖 Bot monitorando promoções e cupons...")
 client.run_until_disconnected()
