@@ -6,7 +6,7 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
 def send_test_message():
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    url = f"https://api.telegram.org/bot${BOT_TOKEN}/sendMessage"
     payload = {
         "chat_id": CHAT_ID,
         "text": "✅ Teste: seu bot está funcionando! top"
