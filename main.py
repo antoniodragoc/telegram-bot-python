@@ -15,8 +15,4 @@ def send_test_message():
     print("Status:", response.status_code)
     print("Resposta:", response.json())
 
-if __name__ == "__main__":
-    if not BOT_TOKEN or not CHAT_ID:
-        print("❌ BOT_TOKEN ou CHAT_ID não configurados!")
-    else:
-        send_test_message()
+send_test_message()
